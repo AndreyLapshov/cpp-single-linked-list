@@ -8,8 +8,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <vector>
 
-using namespace std;
 
 template <typename Type>
 class SingleLinkedList {
@@ -36,18 +36,30 @@ class SingleLinkedList {
 
     template <typename T>
     SingleLinkedList(T begin, T end) : SingleLinkedList() {
+    SingleLinkedList temp;  // Temporary list for exception safety
+
+    try {
         for (auto ptr = begin; ptr != end; ++ptr) {
-            PushFront(*ptr);
+            temp.PushFront(*ptr);
         }
+
+        // Swap contents with the temporary list
+        swap(temp);
+    } catch (...) {
+        // If an exception occurs, clear the temporary list
+        temp.Clear();
+        throw;  // Re-throw the exception
     }
+}
 
     SingleLinkedList(std::initializer_list<Type> values) : SingleLinkedList(std::rbegin(values), std::rend(values)) {}
 
-    SingleLinkedList(const SingleLinkedList& other) : SingleLinkedList() {
-        assert(size_ == 0 && head_.next_node == nullptr);
 
-        *this = other;
-    }
+    SingleLinkedList(const SingleLinkedList<Type>& other) : SingleLinkedList() {
+    assert(size_ == 0 && head_.next_node == nullptr);
+
+    *this = other;
+}
 
     ~SingleLinkedList() {
         Clear();
@@ -95,14 +107,14 @@ class SingleLinkedList {
     // Если список пустой, возвращённый итератор будет равен end()
     // Результат вызова эквивалентен вызову метода cbegin()
     [[nodiscard]] ConstIterator begin() const noexcept {
-        return ConstIterator{head_.next_node};
+        return cbegin();
     }
 
     // Возвращает константный итератор, указывающий на позицию, следующую за последним элементом односвязного списка
     // Разыменовывать этот итератор нельзя — попытка разыменования приведёт к неопределённому поведению
     // Результат вызова эквивалентен вызову метода cend()
     [[nodiscard]] ConstIterator end() const noexcept {
-        return ConstIterator{nullptr};
+        return  cend();
     }
 
     // Возвращает константный итератор, ссылающийся на первый элемент
@@ -117,7 +129,7 @@ class SingleLinkedList {
         return ConstIterator{nullptr};
     }
 
-    SingleLinkedList& operator=(const SingleLinkedList& other) {
+    SingleLinkedList& operator=(const SingleLinkedList& other) noexcept{
         if (this == &other) {
             return *this;
         }
@@ -126,13 +138,7 @@ class SingleLinkedList {
             return *this;
         }
 
-        try {
-            vector<Type> buffer(other.begin(), other.end());
-            SingleLinkedList tmp{buffer.rbegin(), buffer.rend()};
-            swap(tmp);
-        } catch (...) {
-            throw;
-        }
+ 
         return *this;
     }
 
@@ -148,36 +154,26 @@ class SingleLinkedList {
         return !(*this == other);
     }
 
-    bool operator<(const SingleLinkedList<Type>& other) const {
-        if (IsEqualByRefs(other)) {
-            return false;
-        }
+    bool operator<(const SingleLinkedList<Type>& other) const { //на оанове делаем <= и >
+        if (IsEqualByRefs(other)) { 
+        return false; 
+    }
 
-        if (this->size_ == other.size_) {
-            return !IsSuccessForAnyCrossItems(other, [](const Type& val, const Type& val_other) -> bool {
-                return val >= val_other;
-            });
-        }
+    // Convert linked lists to sequences
+    std::vector<Type> thisSequence(this->begin(), this->end());
+    std::vector<Type> otherSequence(other.begin(), other.end());
 
-        return this->size_ < other.size_;
+    // Use std::lexicographical_compare for comparison
+    return std::lexicographical_compare(thisSequence.begin(), thisSequence.end(),
+                                        otherSequence.begin(), otherSequence.end());
     }
 
     bool operator<=(const SingleLinkedList<Type>& other) const {
-        if (IsEqualByRefs(other)) {
-            return true;
-        }
-
-        if (this->size_ == other.size_) {
-            return !IsSuccessForAnyCrossItems(other, [](const Type& val, const Type& val_other) -> bool {
-                return val > val_other;
-            });
-        }
-
-        return this->size_ < other.size_;
+        return (!(other < *this) || (*this != other));
     }
 
     bool operator>(const SingleLinkedList<Type>& other) const {
-        return !(*this <= other);
+        return !(*this < other);
     }
 
     bool operator>=(const SingleLinkedList<Type>& other) const {
@@ -260,7 +256,7 @@ class SingleLinkedList {
         return this == &other || &this->head_ == &other.head_;
     }
 
-    bool IsSuccessForAnyCrossItems(const SingleLinkedList& other, function<bool(const Type&, const Type&)> predicate) const {
+    bool IsSuccessForAnyCrossItems(const SingleLinkedList& other, std::function<bool(const Type&, const Type&)> predicate) const {
         for (auto ptr = this->begin(), ptr_other = other.begin(); ptr != this->end() && ptr_other != other.end(); ++ptr, ++ptr_other) {
             if (predicate(*ptr, *ptr_other)) {
                 return true;
@@ -310,7 +306,7 @@ class SingleLinkedList<Type>::BasicIterator {
     // Оператор сравнения итераторов (в роли второго аргумента выступает константный итератор)
     // Два итератора равны, если они ссылаются на один и тот же элемент списка либо на end()
     [[nodiscard]] bool operator==(const BasicIterator<const Type>& rhs) const noexcept {
-        if ((node_ == nullptr && rhs.node_ == nullptr) || node_ == rhs.node_) {
+        if (node_ == rhs.node_) {
             return true;
         }
 
