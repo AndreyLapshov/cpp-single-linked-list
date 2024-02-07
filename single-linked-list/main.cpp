@@ -1,9 +1,3 @@
-#include <cassert>
-#include <cstddef>
-#include <string>
-#include <utility>
-#include <algorithm>
-#include "single-linked-list.h"
 
 void Test0() {
     using namespace std;
