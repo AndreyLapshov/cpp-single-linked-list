@@ -71,7 +71,7 @@ class SingleLinkedList {
         // Оператор проверки итераторов на неравенство
         // Противоположен !=
         [[nodiscard]] bool operator!=(const BasicIterator<const Type>& rhs) const noexcept {
-            return this->node_ != rhs.node_;
+            return !(this->node_ == rhs.node_);
         }
 
         // Оператор сравнения итераторов (в роли второго аргумента итератор)
@@ -83,7 +83,7 @@ class SingleLinkedList {
         // Оператор проверки итераторов на неравенство
         // Противоположен !=
         [[nodiscard]] bool operator!=(const BasicIterator<Type>& rhs) const noexcept {
-            return this->node_ != rhs.node_;
+            return !(this->node_ == rhs.node_);
         }
 
         // Оператор прединкремента. После его вызова итератор указывает на следующий элемент списка
@@ -138,18 +138,13 @@ public:
         // используем шаблонный приватный метод
         Assign(values);
 
-        // альтернативный шаблонный метод
-        // Assign(values.begin(), values.end());
+
     }
 
     SingleLinkedList(const SingleLinkedList& other) {
-        assert(size_ == 0 && head_.next_node == nullptr);
-
         // используем шаблонный приватный метод
         Assign(other);
 
-        // альтернативный шаблонный метод
-        // Assign(other.begin(), other.end());
     }
 
     ~SingleLinkedList() {
@@ -307,21 +302,18 @@ private:
     // методом PushFront() и двумя циклами
     template<typename T>
     void Assign(T& elem) {
-        SingleLinkedList elem_copy;
-        SingleLinkedList tmp_reverse;
+        SingleLinkedList tmp;
+        Node *n = &tmp.head_;
 
-        // первый цикл вставляет элементы в обратном порядке
-        for (auto it = elem.begin(); it != elem.end(); ++it) {
-            tmp_reverse.PushFront(*it);
-        }
-        // второй цикл вставляет элементы в нужном для обмена порядке
-        for (auto it = tmp_reverse.begin(); it != tmp_reverse.end(); ++it) {
-            elem_copy.PushFront(*it);
+        for (const auto& it:elem) {
+
+            n->next_node = new Node(it, nullptr);
+            tmp.size_++;
+            n=n->next_node;
         }
 
-        swap(elem_copy);
+        swap(tmp);
     }
-
 
 };
 
@@ -332,6 +324,12 @@ void swap(SingleLinkedList<Type>& lhs, SingleLinkedList<Type>& rhs) noexcept {
 
 template <typename Type>
 bool operator==(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
+    if (&lhs == &rhs) // Проверка на один и тот же контейнер
+        return true;
+
+    if (lhs.GetSize() != rhs.GetSize()) // Проверка на разный размер контейнеров
+        return false;
+
     return std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
@@ -347,15 +345,15 @@ bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return !(lhs > rhs);
+    return ((rhs < lhs )||(rhs == lhs ));
 }
 
 template <typename Type>
 bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return rhs < lhs;
+    return (!(rhs < lhs)||(rhs != lhs ));
 }
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return !(lhs < rhs);
+    return !(rhs<lhs);
 }
